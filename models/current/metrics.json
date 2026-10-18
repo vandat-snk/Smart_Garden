@@ -1,0 +1,224 @@
+{
+  "CNN 1D ensemble": {
+    "validation": {
+      "accuracy": 0.9619565217391305,
+      "precision": 0.4444444444444444,
+      "recall": 0.6666666666666666,
+      "f1": 0.5333333333333333,
+      "pr_auc": 0.5002645502645502,
+      "roc_auc": 0.9681647940074907,
+      "confusion_matrix": [
+        [
+          173,
+          5
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "threshold": 0.55262690782547,
+      "samples": 184,
+      "positives": 6
+    },
+    "test": {
+      "accuracy": 0.9728260869565217,
+      "precision": 0.42857142857142855,
+      "recall": 0.75,
+      "f1": 0.5454545454545454,
+      "pr_auc": 0.6777777777777778,
+      "roc_auc": 0.9888888888888888,
+      "confusion_matrix": [
+        [
+          176,
+          4
+        ],
+        [
+          1,
+          3
+        ]
+      ],
+      "threshold": 0.55262690782547,
+      "samples": 184,
+      "positives": 4
+    }
+  },
+  "Logistic Regression": {
+    "validation": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.6666666666666666,
+      "recall": 0.6666666666666666,
+      "f1": 0.6666666666666666,
+      "pr_auc": 0.6533040935672514,
+      "roc_auc": 0.9662921348314606,
+      "confusion_matrix": [
+        [
+          176,
+          2
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "threshold": 0.8586016893386841,
+      "samples": 184,
+      "positives": 6
+    },
+    "test": {
+      "accuracy": 0.9891304347826086,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6666666666666666,
+      "pr_auc": 0.6116600790513833,
+      "roc_auc": 0.9625,
+      "confusion_matrix": [
+        [
+          180,
+          0
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "threshold": 0.8586016893386841,
+      "samples": 184,
+      "positives": 4
+    }
+  },
+  "Decision Tree": {
+    "validation": {
+      "accuracy": 0.967391304347826,
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1": 0.5,
+      "pr_auc": 0.29838709677419356,
+      "roc_auc": 0.9129213483146068,
+      "confusion_matrix": [
+        [
+          175,
+          3
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "threshold": 0.9760425909494229,
+      "samples": 184,
+      "positives": 6
+    },
+    "test": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6666666666666666,
+      "pr_auc": 0.5,
+      "roc_auc": 0.9888888888888889,
+      "confusion_matrix": [
+        [
+          176,
+          4
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "threshold": 0.9760425909494229,
+      "samples": 184,
+      "positives": 4
+    }
+  },
+  "Random Forest": {
+    "validation": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.75,
+      "recall": 0.5,
+      "f1": 0.6,
+      "pr_auc": 0.652065527065527,
+      "roc_auc": 0.9756554307116105,
+      "confusion_matrix": [
+        [
+          177,
+          1
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "threshold": 0.9080372533673571,
+      "samples": 184,
+      "positives": 6
+    },
+    "test": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.5,
+      "recall": 0.25,
+      "f1": 0.3333333333333333,
+      "pr_auc": 0.6916666666666667,
+      "roc_auc": 0.9916666666666667,
+      "confusion_matrix": [
+        [
+          179,
+          1
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "threshold": 0.9080372533673571,
+      "samples": 184,
+      "positives": 4
+    }
+  },
+  "Rule soil < 30%": {
+    "test": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "pr_auc": 0.021739130434782608,
+      "roc_auc": 0.5,
+      "confusion_matrix": [
+        [
+          180,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "threshold": 0.5,
+      "samples": 184,
+      "positives": 4
+    }
+  },
+  "Always NO WATER": {
+    "test": {
+      "accuracy": 0.9782608695652174,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "pr_auc": 0.021739130434782608,
+      "roc_auc": 0.5,
+      "confusion_matrix": [
+        [
+          180,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "threshold": 0.5,
+      "samples": 184,
+      "positives": 4
+    }
+  }
+}

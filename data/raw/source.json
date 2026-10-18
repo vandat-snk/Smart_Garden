@@ -1,0 +1,20 @@
+{
+  "title": "Environmental Sensor Dataset for LSTM-Based Predictive Irrigation in Smart Home Gardening Using Edge IoT",
+  "authors": ["MD NAZMUL HOWLADER", "Fatema Tuz Zohora Priyanka"],
+  "doi": "10.17632/jtsyb593fy.1",
+  "landing_page": "https://data.mendeley.com/datasets/jtsyb593fy/1",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "original_filename": "Edge_IoT_Predictive_Irrigation_Dataset.xlsx",
+  "download_url": "https://data.mendeley.com/public-files/datasets/jtsyb593fy/files/3dca37e9-358e-4034-b166-4244082b9177/file_downloaded",
+  "sha256_xlsx": "840cb77e743ca6846d6d097cf054cb67c33f2286c547ab1a05adfc78be222686",
+  "retrieved_date": "2026-10-17",
+  "changes": "Original workbook preserved. Sheet1 exported to CSV with original column names. Preprocessing is performed in ml/data.py without changing raw files.",
+  "rows": 960,
+  "positive_pump_status_rows": 28,
+  "interval_seconds": 1800,
+  "timezone": "Not specified in source; no absolute hour feature used",
+  "light_unit": "Source column Light_Intensity has no explicit unit in column header; public description does not establish metrological calibration. Live BH1750 measures lux. Validate scale before deployment.",
+  "duration_ground_truth": false,
+  "label_caveat": "Pump_Status is recorded historical pump activity, not independently verified optimal watering need."
+}

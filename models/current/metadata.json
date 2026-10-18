@@ -1,0 +1,82 @@
+{
+  "version": "cnn-20261017T114803Z",
+  "architecture": "temporal_cnn_1d_ensemble",
+  "config": {
+    "channels": 32,
+    "dropout": 0.3
+  },
+  "seeds": [
+    17,
+    42,
+    2026
+  ],
+  "window": 8,
+  "features": [
+    "soil_moisture",
+    "temperature",
+    "humidity",
+    "light_intensity"
+  ],
+  "preprocessing": {
+    "median": [
+      64.0,
+      29.0,
+      75.0,
+      25.0
+    ],
+    "mean": [
+      66.89375305175781,
+      29.173439025878906,
+      74.49305725097656,
+      288.1892395019531
+    ],
+    "std": [
+      9.371524810791016,
+      3.3954124450683594,
+      8.669668197631836,
+      348.9712829589844
+    ]
+  },
+  "threshold": 0.55262690782547,
+  "interval_seconds": 1800,
+  "horizon_steps": 1,
+  "label": "pump_status",
+  "experimental": true,
+  "duration_trained": false,
+  "data_sha256": "53a8bc8f56dd4c35b797f7255880ad4353605d2b69252910158b1ad8c414abe2",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 2050",
+  "torch_version": "2.8.0+cu126",
+  "split_rows": {
+    "train": {
+      "raw_start": 0,
+      "raw_end": 575,
+      "windows": 568,
+      "positive": 18,
+      "first_target": "2026-04-01 04:00:00",
+      "last_target": "2026-04-12 23:30:00"
+    },
+    "validation": {
+      "raw_start": 576,
+      "raw_end": 767,
+      "windows": 184,
+      "positive": 6,
+      "first_target": "2026-04-13 04:00:00",
+      "last_target": "2026-04-16 23:30:00"
+    },
+    "test": {
+      "raw_start": 768,
+      "raw_end": 959,
+      "windows": 184,
+      "positive": 4,
+      "first_target": "2026-04-17 04:00:00",
+      "last_target": "2026-04-20 23:30:00"
+    }
+  },
+  "limitations": [
+    "Historical pump status is a proxy action label, not optimal irrigation need.",
+    "Target-row sensor values are excluded because they may be post-irrigation.",
+    "Small chronological test with few positive events; field validation required.",
+    "No duration ground truth in public data; configured pulse is not an AI regression prediction."
+  ]
+}

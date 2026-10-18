@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+runtime/
+firmware/.pio/
+firmware/include/garden_config.h
+*.log
+*.pyc

@@ -1,0 +1,9 @@
+.venv
+.env
+runtime
+firmware
+data
+tests
+docs
+__pycache__
+.pytest_cache
