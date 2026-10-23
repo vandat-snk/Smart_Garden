@@ -1,19 +1,329 @@
 <!doctype html>
 <html lang="vi">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Garden · Vườn thông minh</title><link rel="stylesheet" href="/static/styles.css"><script src="/static/app.js" defer></script></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Smart Garden · Vườn Thông Minh AIoT</title>
+  <meta name="description" content="Hệ thống giám sát và điều khiển tưới cây thông minh sử dụng AI và IoT — ESP32, CNN 1D, PostgreSQL.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
 <body>
-<aside class="sidebar"><a href="#overview" class="brand"><span class="brand-icon">♧</span><span>smart<span class="light">garden</span><small>AI + INTERNET OF THINGS</small></span></a>
-<div class="nav-caption">KHÔNG GIAN CỦA BẠN</div><nav><a class="nav-active" href="#overview"><span>◫</span> Tổng quan</a><a href="#monitor"><span>⌁</span> Dữ liệu cảm biến</a><a href="#control"><span>⊙</span> Điều khiển tưới</a><a href="#history"><span>◷</span> Lịch sử hoạt động</a><a href="/docs" target="_blank" rel="noopener"><span>↗</span> Tài liệu API</a></nav>
-<div class="sidebar-bottom"><div class="seedling">🌱</div><strong>Hiểu cây hơn mỗi ngày.</strong><p>Theo dõi môi trường và tưới có kiểm soát từ dữ liệu thực tế.</p><span class="version">ESP32 · PostgreSQL · CNN 1D</span></div></aside>
-<main id="overview"><header><div class="breadcrumb">Khu vườn của tôi <span>/</span> Tổng quan</div><div class="header-right"><span id="connection" class="badge neutral">Chưa kết nối</span><span id="clock"></span></div></header>
-<section class="page-heading"><div><p class="eyebrow">GIÁM SÁT & CHĂM SÓC</p><h1>Khu vườn của bạn</h1><p class="subtitle">Một góc xanh, được chăm sóc từ những dữ liệu nhỏ.</p></div><button id="refresh" class="secondary">↻ Làm mới</button></section>
-<form id="connect-form" class="connection-bar"><div><label for="token">Khóa quản trị</label><input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN trong tệp .env" required></div><div><label for="device">Thiết bị</label><input id="device" value="garden-01" required pattern="[a-zA-Z0-9_-]+"></div><button type="submit">Kết nối</button><span>Khóa chỉ giữ trong bộ nhớ của tab.</span></form>
-<div id="message" role="status" aria-live="polite" class="message" hidden></div>
-<section class="hero"><div class="hero-copy"><span class="hero-tag"><span class="dot"></span> SMART GARDEN LAB</span><h2>Dữ liệu rõ ràng.<br>Chăm cây chủ động.</h2><p id="garden-summary">Kết nối để xem tình trạng khu vườn, dữ liệu cảm biến và gợi ý tưới.</p><div class="hero-facts"><div><span>THIẾT BỊ</span><strong id="device-label">garden-01</strong></div><div><span>CẬP NHẬT GẦN NHẤT</span><strong id="last-update">Chưa có dữ liệu</strong></div></div></div>
-<svg class="plant-art" viewBox="0 0 340 260" aria-hidden="true"><circle cx="178" cy="129" r="109" fill="#e6eccd" opacity=".65"/><path d="M176 177 C173 135 176 97 188 57" stroke="#4d7744" stroke-width="5" fill="none"/><path d="M177 136 C112 143 104 90 121 86 C163 84 176 108 177 136" fill="#618457"/><path d="M178 114 C225 116 250 72 233 66 C196 61 179 82 178 114" fill="#8ea56a"/><path d="M186 76 C145 68 143 29 159 27 C185 33 190 52 186 76" fill="#345e3f"/><path d="M146 167 H210 L200 229 H157 Z" fill="#c68c5f"/><path d="M140 159 H217 V176 H140 Z" rx="5" fill="#dca57b"/><ellipse cx="178" cy="233" rx="59" ry="7" fill="#214c35" opacity=".09"/><circle cx="79" cy="175" r="4" fill="#9eac76"/><circle cx="263" cy="129" r="7" fill="#c7d3a6"/><path d="M248 188 q14 -18 28 0 q-14 18 -28 0" fill="#789864"/></svg></section>
-<section class="metrics" aria-label="Chỉ số cảm biến"><article><div class="metric-top"><span>Độ ẩm đất</span><span class="metric-icon">◉</span></div><div class="metric-value"><strong id="soil">—</strong><span>%</span></div><div class="meter"><i id="soil-meter"></i></div><p id="soil-note">Chờ dữ liệu cảm biến</p></article><article><div class="metric-top"><span>Nhiệt độ</span><span class="metric-icon amber">♨</span></div><div class="metric-value"><strong id="temperature">—</strong><span>°C</span></div><p>Nhiệt độ không khí · DHT22</p></article><article><div class="metric-top"><span>Độ ẩm không khí</span><span class="metric-icon blue">◇</span></div><div class="metric-value"><strong id="humidity">—</strong><span>%</span></div><p>Độ ẩm tương đối · DHT22</p></article><article><div class="metric-top"><span>Ánh sáng</span><span class="metric-icon yellow">☼</span></div><div class="metric-value"><strong id="light">—</strong><span>lux</span></div><p>Cường độ ánh sáng · BH1750</p></article></section>
-<section class="main-grid"><article class="panel chart-panel" id="monitor"><div class="panel-title"><div><h3>Nhịp điệu khu vườn</h3><p>Biến động dữ liệu theo thời gian</p></div><select id="hours" aria-label="Khoảng thời gian"><option value="1">1 giờ qua</option><option value="6">6 giờ qua</option><option value="24" selected>24 giờ qua</option><option value="168">7 ngày qua</option></select></div><div class="chart-tabs" role="group" aria-label="Chọn cảm biến"><button class="active" data-metric="soil_moisture">Độ ẩm đất</button><button data-metric="temperature">Nhiệt độ</button><button data-metric="humidity">Độ ẩm khí</button><button data-metric="light_intensity">Ánh sáng</button></div><div class="chart-wrap"><canvas id="chart" role="img" aria-label="Biểu đồ dữ liệu cảm biến"></canvas><p id="chart-empty">Chưa có dữ liệu trong khoảng thời gian này.</p></div><div class="chart-footer"><span id="sample-count">0 mẫu</span><button id="export" class="text-button">↓ Xuất CSV</button></div></article>
-<article class="panel ai-panel"><div class="panel-title"><h3>Trợ lý tưới cây</h3><span class="badge neutral" id="ai-badge">CNN 1D</span></div><div class="ai-orb">✳</div><h2 id="prediction">Đang chờ dữ liệu</h2><p id="prediction-reason">Mô hình đọc chuỗi cảm biến để đưa ra dự báo.</p><div class="ai-details"><div><span>Xác suất WATER</span><strong id="probability">—</strong></div><div><span>Thời lượng đề xuất</span><strong id="duration">—</strong></div><div><span>Nguồn thời lượng</span><strong id="duration-source">—</strong></div></div><p class="model-note" id="model-note">Chưa kết nối đến mô hình.</p></article></section>
-<section class="panel control-panel" id="control"><div class="panel-title"><div><h3>Điều khiển tưới</h3><p>Lệnh chỉ có hiệu lực khi thiết bị phản hồi.</p></div><span id="pump-badge" class="badge neutral">Bơm: chưa rõ</span></div><div class="controls"><div class="mode-group"><label for="mode">Chế độ hoạt động</label><select id="mode"><option value="manual">Thủ công</option><option value="rule">Tự động theo ngưỡng</option><option value="ai">Tự động theo AI</option></select><button id="set-mode" class="secondary">Áp dụng</button></div><div class="pump-group"><label for="seconds">Thời gian (giây)</label><input id="seconds" type="number" value="5" min="1" max="30"><button id="start-pump">▶ Tưới ngay</button><button id="stop-pump" class="danger">■ Dừng bơm</button></div></div><p id="safety-note" class="muted">Mỗi lần tối đa 30 giây. Khoảng nghỉ giúp nước thấm vào đất trước khi tưới tiếp.</p></section>
-<section class="panel" id="history"><div class="panel-title"><div><h3>Nhật ký tưới cây</h3><p>Lệnh điều khiển và xác nhận từ thiết bị</p></div><span id="history-count" class="muted">0 lệnh</span></div><div class="table-wrap"><table><thead><tr><th>Thời điểm</th><th>Thao tác</th><th>Thời lượng</th><th>Nguồn</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody id="history-body"><tr><td colspan="6" class="empty-row">Chưa có hoạt động tưới.</td></tr></tbody></table></div></section>
-<footer><span>Smart Garden · Đồ án AIoT</span><span>Giờ hiển thị: Việt Nam (UTC+7) · Làm mới mỗi 5 giây</span></footer></main></body></html>
+  <a class="skip-link" href="#monitor">Đến dữ liệu cảm biến</a>
+
+  <div class="bg-canvas" aria-hidden="true">
+    <div class="particle" style="--x:15%;--y:20%;--d:6s;--s:3px"></div>
+    <div class="particle" style="--x:80%;--y:10%;--d:8s;--s:5px"></div>
+    <div class="particle" style="--x:45%;--y:70%;--d:5s;--s:2px"></div>
+    <div class="particle" style="--x:90%;--y:55%;--d:9s;--s:4px"></div>
+    <div class="particle" style="--x:25%;--y:85%;--d:7s;--s:3px"></div>
+    <div class="particle" style="--x:60%;--y:40%;--d:6s;--s:2px"></div>
+    <div class="particle" style="--x:10%;--y:60%;--d:10s;--s:6px"></div>
+    <div class="particle" style="--x:70%;--y:90%;--d:4s;--s:3px"></div>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <a href="#overview" class="brand" aria-label="Smart Garden trang chủ">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12M12 12C12 7 7 4 3 6M12 12C12 7 17 4 21 6M12 12C12 17 7 19 3 18M12 12C12 17 17 19 21 18"/></svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Smart<span class="brand-accent">Garden</span></span>
+        <small class="brand-sub">AI · IOT · ESP32</small>
+      </div>
+    </a>
+
+    <div class="nav-section-label">KHÔNG GIAN CỦA BẠN</div>
+    <nav aria-label="Điều hướng chính">
+      <a class="nav-item nav-active" href="#overview" id="nav-overview" aria-current="location">
+        <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+        <span>Tổng quan</span>
+      </a>
+      <a class="nav-item" href="#monitor" id="nav-monitor">
+        <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+        <span>Dữ liệu cảm biến</span>
+      </a>
+      <a class="nav-item" href="#control" id="nav-control">
+        <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg></span>
+        <span>Điều khiển tưới</span>
+      </a>
+      <a class="nav-item" href="#history" id="nav-history">
+        <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+        <span>Lịch sử hoạt động</span>
+      </a>
+      <a class="nav-item nav-external" href="/docs" target="_blank" rel="noopener">
+        <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+        <span>Tài liệu API</span>
+        <span class="nav-ext-icon" aria-hidden="true">↗</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-status-card">
+      <div class="status-card-header">
+        <div class="status-indicator" id="sidebar-status-dot"></div>
+        <span id="sidebar-status-text">Chưa kết nối</span>
+      </div>
+      <p class="status-card-desc">Theo dõi môi trường · Tưới thông minh</p>
+      <div class="tech-stack">
+        <span class="tech-tag">ESP32</span>
+        <span class="tech-tag">CNN 1D</span>
+        <span class="tech-tag">PostgreSQL</span>
+      </div>
+    </div>
+  </aside>
+  <button class="sidebar-overlay" id="sidebar-overlay" type="button" aria-label="Đóng menu" tabindex="-1" hidden></button>
+
+  <main id="overview">
+
+    <header class="topbar">
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Mở menu" aria-controls="sidebar" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="breadcrumb">
+        <span class="bc-root">Khu vườn của tôi</span>
+        <svg class="bc-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="bc-current" id="current-section">Tổng quan</span>
+      </div>
+      <div class="topbar-right">
+        <span id="connection" class="badge badge-neutral"><span class="badge-dot"></span>Chưa kết nối</span>
+        <div class="clock-wrap">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="clock"></span>
+        </div>
+      </div>
+    </header>
+
+    <section class="page-heading">
+      <div class="page-heading-left">
+        <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>GIÁM SÁT &amp; CHĂM SÓC</p>
+        <h1>Khu vườn của bạn</h1>
+        <p class="subtitle">Một góc xanh, được chăm sóc từ những dữ liệu nhỏ.</p>
+      </div>
+      <button id="refresh" class="btn-secondary btn-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Làm mới
+      </button>
+    </section>
+
+    <form id="connect-form" class="connect-card">
+      <div class="connect-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="connect-fields">
+        <div class="field-group">
+          <label for="token">Khóa quản trị</label>
+          <input id="token" type="password" autocomplete="off" placeholder="Khóa quản trị từ tệp .env" required aria-describedby="connect-hint">
+        </div>
+        <div class="field-group">
+          <label for="device">Thiết bị</label>
+          <input id="device" value="garden-01" required maxlength="64" pattern="[a-zA-Z0-9_-]+">
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="connect-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Kết nối
+      </button>
+      <p class="connect-hint" id="connect-hint">Khóa chỉ giữ trong tab và gửi đến API để xác thực.</p>
+    </form>
+
+    <div id="message" role="status" aria-live="polite" class="message" hidden></div>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-badge"><span class="hero-badge-dot" aria-hidden="true"></span>SMART GARDEN LAB</div>
+        <h2 class="hero-title">Dữ liệu rõ ràng.<br><em>Chăm cây chủ động.</em></h2>
+        <p id="garden-summary" class="hero-desc">Kết nối để xem tình trạng khu vườn, dữ liệu cảm biến và gợi ý tưới.</p>
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">THIẾT BỊ</span>
+            <strong id="device-label" class="hero-meta-value">garden-01</strong>
+          </div>
+          <div class="hero-meta-sep" aria-hidden="true"></div>
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">CẬP NHẬT GẦN NHẤT</span>
+            <strong id="last-update" class="hero-meta-value">Chưa có dữ liệu</strong>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="garden-orb">
+          <svg class="plant-svg" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M100 180 C98 145 100 110 107 72" stroke="url(#stemGrad)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M100 138 C65 142 55 108 68 102 C98 98 100 118 100 138" fill="url(#leafLeft)" opacity="0.9"/>
+            <path d="M101 118 C131 120 148 88 135 82 C108 76 102 96 101 118" fill="url(#leafRight)" opacity="0.85"/>
+            <path d="M106 82 C80 74 78 46 90 44 C110 48 112 64 106 82" fill="url(#leafTop)" opacity="0.95"/>
+            <path d="M78 175 H122 L115 215 H85 Z" fill="url(#potGrad)"/>
+            <rect x="74" y="168" width="52" height="11" rx="4" fill="url(#potRim)"/>
+            <circle cx="55" cy="155" r="3" fill="#4ade80" opacity="0.4"/>
+            <circle cx="148" cy="120" r="5" fill="#86efac" opacity="0.3"/>
+            <circle cx="140" cy="165" r="2.5" fill="#4ade80" opacity="0.5"/>
+            <defs>
+              <linearGradient id="stemGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#16a34a"/><stop offset="100%" stop-color="#166534"/></linearGradient>
+              <linearGradient id="leafLeft" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/></linearGradient>
+              <linearGradient id="leafRight" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4ade80"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
+              <linearGradient id="leafTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#166534"/><stop offset="100%" stop-color="#15803d"/></linearGradient>
+              <linearGradient id="potGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#854d0e"/><stop offset="100%" stop-color="#713f12"/></linearGradient>
+              <linearGradient id="potRim" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a16207"/><stop offset="100%" stop-color="#854d0e"/></linearGradient>
+            </defs>
+          </svg>
+          <div class="orb-ring orb-ring-1"></div>
+          <div class="orb-ring orb-ring-2"></div>
+          <div class="orb-ring orb-ring-3"></div>
+        </div>
+        <div class="data-chip chip-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>5s refresh</span></div>
+        <div class="data-chip chip-2"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg><span>CNN 1D</span></div>
+        <div class="data-chip chip-3"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>PostgreSQL</span></div>
+      </div>
+    </section>
+
+    <section class="metrics-grid" aria-label="Chỉ số cảm biến">
+      <article class="metric-card" id="metric-soil">
+        <div class="metric-header">
+          <div class="metric-info"><span class="metric-label">Độ ẩm đất</span><span class="metric-sensor">Capacitive · ADC</span></div>
+          <div class="metric-icon-wrap metric-icon-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
+        </div>
+        <div class="metric-value-row"><strong id="soil" class="metric-number">—</strong><span class="metric-unit">%</span></div>
+        <div class="meter-track"><div class="meter-fill meter-fill-green" id="soil-meter"></div></div>
+        <p id="soil-note" class="metric-note">Chờ dữ liệu cảm biến</p>
+      </article>
+
+      <article class="metric-card" id="metric-temp">
+        <div class="metric-header">
+          <div class="metric-info"><span class="metric-label">Nhiệt độ</span><span class="metric-sensor">DHT22 · Không khí</span></div>
+          <div class="metric-icon-wrap metric-icon-amber"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></div>
+        </div>
+        <div class="metric-value-row"><strong id="temperature" class="metric-number">—</strong><span class="metric-unit">°C</span></div>
+        <div class="meter-track"><div class="meter-fill meter-fill-amber" id="temp-meter"></div></div>
+        <p class="metric-note">Nhiệt độ không khí xung quanh</p>
+      </article>
+
+      <article class="metric-card" id="metric-humidity">
+        <div class="metric-header">
+          <div class="metric-info"><span class="metric-label">Độ ẩm không khí</span><span class="metric-sensor">DHT22 · Tương đối</span></div>
+          <div class="metric-icon-wrap metric-icon-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
+        </div>
+        <div class="metric-value-row"><strong id="humidity" class="metric-number">—</strong><span class="metric-unit">%</span></div>
+        <div class="meter-track"><div class="meter-fill meter-fill-blue" id="humidity-meter"></div></div>
+        <p class="metric-note">Độ ẩm tương đối không khí</p>
+      </article>
+
+      <article class="metric-card" id="metric-light">
+        <div class="metric-header">
+          <div class="metric-info"><span class="metric-label">Ánh sáng</span><span class="metric-sensor">BH1750 · Lux</span></div>
+          <div class="metric-icon-wrap metric-icon-yellow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+        </div>
+        <div class="metric-value-row"><strong id="light" class="metric-number">—</strong><span class="metric-unit">lux</span></div>
+        <div class="meter-track"><div class="meter-fill meter-fill-yellow" id="light-meter"></div></div>
+        <p class="metric-note">Cường độ ánh sáng chiếu sáng</p>
+      </article>
+    </section>
+
+    <section class="main-grid" id="monitor">
+      <article class="panel chart-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon panel-icon-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div><h3 class="panel-title">Nhịp điệu khu vườn</h3><p class="panel-subtitle">Các mẫu cảm biến được cập nhật định kỳ</p></div>
+          </div>
+          <select id="hours" class="select-styled" aria-label="Khoảng thời gian">
+            <option value="1">1 giờ qua</option>
+            <option value="6">6 giờ qua</option>
+            <option value="24" selected>24 giờ qua</option>
+            <option value="168">7 ngày qua</option>
+          </select>
+        </div>
+        <div class="chart-tabs" role="group" aria-label="Chọn cảm biến">
+          <button class="chart-tab active" data-metric="soil_moisture" aria-pressed="true"><span class="tab-dot tab-dot-green" aria-hidden="true"></span>Độ ẩm đất</button>
+          <button class="chart-tab" data-metric="temperature" aria-pressed="false"><span class="tab-dot tab-dot-amber" aria-hidden="true"></span>Nhiệt độ</button>
+          <button class="chart-tab" data-metric="humidity" aria-pressed="false"><span class="tab-dot tab-dot-blue" aria-hidden="true"></span>Độ ẩm khí</button>
+          <button class="chart-tab" data-metric="light_intensity" aria-pressed="false"><span class="tab-dot tab-dot-yellow" aria-hidden="true"></span>Ánh sáng</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart" role="img" aria-label="Biểu đồ dữ liệu cảm biến"></canvas>
+          <p id="chart-empty" class="chart-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Chưa có dữ liệu trong khoảng thời gian này</p>
+        </div>
+        <div class="chart-footer">
+          <span id="sample-count" class="sample-count">0 mẫu</span>
+          <button id="export" class="btn-text"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Xuất CSV</button>
+        </div>
+      </article>
+
+      <article class="panel ai-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <div class="panel-icon panel-icon-purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div><h3 class="panel-title">Trợ lý AI tưới cây</h3><p class="panel-subtitle">CNN 1D · Phân tích chuỗi thời gian</p></div>
+          </div>
+          <span class="badge badge-neutral" id="ai-badge">CNN 1D</span>
+        </div>
+        <div class="ai-prediction-card" id="ai-prediction-card">
+          <div class="ai-orb" id="ai-orb" aria-hidden="true">
+            <div class="ai-orb-inner"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+          </div>
+          <h2 id="prediction" class="ai-prediction-text">Đang chờ dữ liệu</h2>
+          <p id="prediction-reason" class="ai-reason">Mô hình đọc chuỗi cảm biến để đưa ra dự báo.</p>
+        </div>
+        <div class="ai-stats">
+          <div class="ai-stat-row"><span class="ai-stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Xác suất WATER</span><strong id="probability" class="ai-stat-value">—</strong></div>
+          <div class="ai-stat-row"><span class="ai-stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Thời lượng đề xuất</span><strong id="duration" class="ai-stat-value">—</strong></div>
+          <div class="ai-stat-row"><span class="ai-stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>Nguồn thời lượng</span><strong id="duration-source" class="ai-stat-value">—</strong></div>
+        </div>
+        <p class="model-note" id="model-note">Chưa kết nối đến mô hình.</p>
+      </article>
+    </section>
+
+    <section class="panel control-panel" id="control">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div class="panel-icon panel-icon-cyan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 15.54a5 5 0 0 1 0-7.07"/></svg></div>
+          <div><h3 class="panel-title">Điều khiển tưới</h3><p class="panel-subtitle">Lệnh chỉ có hiệu lực khi thiết bị phản hồi</p></div>
+        </div>
+        <span id="pump-badge" class="badge badge-neutral"><span class="badge-dot"></span>Bơm: chưa rõ</span>
+      </div>
+      <div class="control-grid">
+        <div class="control-block">
+          <label class="control-label" for="mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Chế độ hoạt động</label>
+          <div class="control-row">
+            <select id="mode" class="select-styled select-full"><option value="manual">Thủ công</option><option value="rule">Tự động theo ngưỡng</option><option value="ai">Tự động theo AI</option></select>
+            <button id="set-mode" class="btn-secondary">Áp dụng</button>
+          </div>
+        </div>
+        <div class="control-block">
+          <label class="control-label" for="seconds"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Điều khiển bơm thủ công</label>
+          <div class="control-row">
+            <div class="input-with-suffix">
+              <input id="seconds" type="number" value="5" min="1" max="30" step="1" class="input-styled" aria-label="Thời gian tưới tính bằng giây">
+              <span class="input-suffix">giây</span>
+            </div>
+            <button id="start-pump" class="btn-primary btn-pump-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Tưới ngay</button>
+            <button id="stop-pump" class="btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dừng bơm</button>
+          </div>
+        </div>
+      </div>
+      <div class="safety-note" id="safety-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Mỗi lần tối đa 30 giây. Khoảng nghỉ giúp nước thấm vào đất trước khi tưới tiếp.</div>
+    </section>
+
+    <section class="panel history-panel" id="history">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <div class="panel-icon panel-icon-slate"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><h3 class="panel-title">Nhật ký tưới cây</h3><p class="panel-subtitle">Lệnh điều khiển và xác nhận từ thiết bị</p></div>
+        </div>
+        <span id="history-count" class="badge badge-neutral">0 lệnh</span>
+      </div>
+      <div class="table-wrap" role="region" aria-label="Bảng lịch sử tưới có thể cuộn ngang" tabindex="0">
+        <table>
+          <caption class="sr-only">Các lệnh tưới và phản hồi từ thiết bị</caption>
+          <thead><tr><th>Thời điểm</th><th>Thao tác</th><th>Thời lượng</th><th>Nguồn</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+          <tbody id="history-body"><tr><td colspan="6" class="empty-row"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>Chưa có hoạt động tưới</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span class="footer-brand">Smart Garden · Đồ án AIoT</span>
+      <span class="footer-info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Giờ hiển thị: Việt Nam (UTC+7) · Làm mới mỗi 5 giây</span>
+    </footer>
+  </main>
+</body>
+</html>
