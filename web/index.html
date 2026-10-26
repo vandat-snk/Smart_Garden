@@ -96,8 +96,8 @@
     <section class="page-heading">
       <div class="page-heading-left">
         <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>GIÁM SÁT &amp; CHĂM SÓC</p>
-        <h1>Khu vườn của bạn</h1>
-        <p class="subtitle">Một góc xanh, được chăm sóc từ những dữ liệu nhỏ.</p>
+        <h1>Tổng quan khu vườn</h1>
+        <p class="subtitle">Theo dõi môi trường và quản lý từng lần tưới.</p>
       </div>
       <button id="refresh" class="btn-secondary btn-icon">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -126,12 +126,15 @@
       <p class="connect-hint" id="connect-hint">Khóa chỉ giữ trong tab và gửi đến API để xác thực.</p>
     </form>
 
-    <div id="message" role="status" aria-live="polite" class="message" hidden></div>
+    <div id="message" role="status" aria-live="polite" class="message" hidden>
+      <span id="message-text" class="message-content"></span>
+      <button id="message-dismiss" type="button" class="message-close" aria-label="Đóng thông báo">×</button>
+    </div>
 
     <section class="hero-section">
       <div class="hero-content">
         <div class="hero-badge"><span class="hero-badge-dot" aria-hidden="true"></span>SMART GARDEN LAB</div>
-        <h2 class="hero-title">Dữ liệu rõ ràng.<br><em>Chăm cây chủ động.</em></h2>
+        <h2 class="hero-title">Dữ liệu rõ ràng.<br><em>Chủ động từng lần tưới.</em></h2>
         <p id="garden-summary" class="hero-desc">Kết nối để xem tình trạng khu vườn, dữ liệu cảm biến và gợi ý tưới.</p>
         <div class="hero-meta">
           <div class="hero-meta-item">
@@ -242,6 +245,12 @@
           <canvas id="chart" role="img" aria-label="Biểu đồ dữ liệu cảm biến"></canvas>
           <p id="chart-empty" class="chart-empty"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Chưa có dữ liệu trong khoảng thời gian này</p>
         </div>
+        <div class="chart-summary" aria-label="Thống kê trong khoảng đã chọn">
+          <span>Gần nhất <strong id="chart-latest">—</strong></span>
+          <span>Thấp nhất <strong id="chart-min">—</strong></span>
+          <span>Cao nhất <strong id="chart-max">—</strong></span>
+        </div>
+        <p id="chart-gap-note" class="chart-gap-note" hidden>Biểu đồ ngắt đoạn tại khoảng thiếu dữ liệu hoặc khi đổi nguồn mô phỏng.</p>
         <div class="chart-footer">
           <span id="sample-count" class="sample-count">0 mẫu</span>
           <button id="export" class="btn-text"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Xuất CSV</button>
@@ -268,7 +277,10 @@
           <div class="ai-stat-row"><span class="ai-stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Thời lượng đề xuất</span><strong id="duration" class="ai-stat-value">—</strong></div>
           <div class="ai-stat-row"><span class="ai-stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>Nguồn thời lượng</span><strong id="duration-source" class="ai-stat-value">—</strong></div>
         </div>
-        <p class="model-note" id="model-note">Chưa kết nối đến mô hình.</p>
+        <details class="model-details">
+          <summary>Chi tiết mô hình và giới hạn dự đoán</summary>
+          <p class="model-note" id="model-note">Chưa kết nối đến mô hình.</p>
+        </details>
       </article>
     </section>
 
@@ -280,6 +292,7 @@
         </div>
         <span id="pump-badge" class="badge badge-neutral"><span class="badge-dot"></span>Bơm: chưa rõ</span>
       </div>
+      <p id="control-hint" class="control-hint">Kết nối hệ thống để điều khiển tưới.</p>
       <div class="control-grid">
         <div class="control-block">
           <label class="control-label" for="mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Chế độ hoạt động</label>
@@ -295,7 +308,7 @@
               <input id="seconds" type="number" value="5" min="1" max="30" step="1" class="input-styled" aria-label="Thời gian tưới tính bằng giây">
               <span class="input-suffix">giây</span>
             </div>
-            <button id="start-pump" class="btn-primary btn-pump-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Tưới ngay</button>
+            <button id="start-pump" class="btn-primary btn-pump-start" aria-describedby="control-hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Tưới ngay</button>
             <button id="stop-pump" class="btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dừng bơm</button>
           </div>
         </div>

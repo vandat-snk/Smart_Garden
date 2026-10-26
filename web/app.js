@@ -4,14 +4,17 @@ const $ = id => document.getElementById(id);
 let token = '', device = 'garden-01', rows = [], metric = 'soil_moisture', polling = false, connected = false;
 let lastStatus = null, lastCommands = [], lastRefresh = 0, refreshPromise = null;
 let commandPending = false, stopPending = false, exporting = false;
+let modeDraft = false;
 
 function updateControls() {
   const s = lastStatus, r = s?.latest;
   const fresh = connected && Date.now() - lastRefresh < 15000;
   const activeStart = lastCommands.some(c => c.action === 'start' && ['queued', 'delivered', 'started'].includes(c.status));
+  const lastStart = lastCommands.find(c => c.action === 'start');
+  const cooldown = s && lastStart ? Math.max(0, Math.ceil((new Date(lastStart.created_at).getTime() + s.safety.cooldown_seconds * 1000 - Date.now()) / 1000)) : 0;
   $('start-pump').disabled = !fresh || !s?.online || s.mode !== 'manual' || s.pump_state !== false ||
     !r?.sensor_ok || !r.reservoir_ok || r.soil_moisture == null || r.soil_moisture >= s.safety.soil_stop_threshold ||
-    activeStart || commandPending || stopPending;
+    activeStart || commandPending || stopPending || cooldown > 0;
   $('set-mode').disabled = !fresh || commandPending || stopPending;
   $('mode').disabled = !fresh || commandPending || stopPending;
   $('seconds').disabled = !fresh || s?.mode !== 'manual' || commandPending;
@@ -20,9 +23,21 @@ function updateControls() {
   $('export').disabled = !fresh || exporting;
   $('refresh').disabled = !token || polling;
   $('connect-btn').disabled = polling || commandPending || stopPending;
+  $('control-hint').textContent = !connected ? 'Kết nối hệ thống để điều khiển tưới.'
+    : !fresh ? 'Đang chờ cập nhật trạng thái mới.'
+    : !s?.online ? 'Thiết bị ngoại tuyến. Chờ dữ liệu mới trước khi tưới.'
+    : !r?.sensor_ok ? 'Cảm biến đang báo lỗi. Kiểm tra thiết bị trước khi tưới.'
+    : !r.reservoir_ok ? 'Bình nước chưa sẵn sàng. Kiểm tra nguồn nước.'
+    : commandPending || stopPending ? 'Đang gửi yêu cầu. Bạn vẫn có thể yêu cầu dừng bơm.'
+    : activeStart || s.pump_state ? 'Đang thực hiện lệnh tưới. Theo dõi xác nhận trong nhật ký.'
+    : s.mode !== 'manual' ? 'Hệ thống đang tự động. Chuyển sang Thủ công nếu muốn tưới bằng nút bấm.'
+    : r.soil_moisture >= s.safety.soil_stop_threshold ? 'Đất đã đạt ngưỡng đủ ẩm. Chưa cần bật bơm.'
+    : cooldown > 0 ? `Đang chờ nước thấm. Có thể tưới tiếp sau ${Math.floor(cooldown / 60)} phút ${cooldown % 60} giây.`
+    : 'Sẵn sàng tưới thủ công. Chọn thời lượng phù hợp rồi bấm Tưới ngay.';
 }
 
 const units = { soil_moisture: '%', temperature: '°C', humidity: '%', light_intensity: 'lux' };
+const metricNames = { soil_moisture: 'độ ẩm đất', temperature: 'nhiệt độ', humidity: 'độ ẩm không khí', light_intensity: 'ánh sáng' };
 
 const statusNames = {
   queued: 'Đang chờ', delivered: 'Đã giao lệnh', started: 'Đã xác nhận bắt đầu',
@@ -49,7 +64,7 @@ function message(text, error = false) {
   const el = $('message');
   el.hidden = false;
   el.className = 'message' + (error ? ' error' : '');
-  el.textContent = text;
+  $('message-text').textContent = text;
   clearTimeout(el._timer);
   if (!error) el._timer = setTimeout(() => { el.hidden = true; }, 6000);
 }
@@ -161,10 +176,21 @@ function renderStatus(s) {
   const humVal  = r?.humidity;
   const luxVal  = r?.light_intensity;
 
-  $('soil').textContent        = number(soilVal, 1);
-  $('temperature').textContent = number(tempVal, 1);
-  $('humidity').textContent    = number(humVal, 1);
-  $('light').textContent       = number(luxVal, 0);
+  // Animate number pop on update
+  function setNum(id, val, digits) {
+    const el = $(id);
+    const newText = number(val, digits);
+    if (el.textContent !== newText) {
+      el.textContent = newText;
+      el.classList.remove('updated');
+      void el.offsetWidth; // reflow
+      el.classList.add('updated');
+    }
+  }
+  setNum('soil', soilVal, 1);
+  setNum('temperature', tempVal, 1);
+  setNum('humidity', humVal, 1);
+  setNum('light', luxVal, 0);
 
   // Meter bars
   setMeter('soil-meter',     soilVal ?? 0, 100);
@@ -180,27 +206,17 @@ function renderStatus(s) {
     : 'Theo dõi độ ẩm và thời gian thấm';
 
   // Mode select
-  if (document.activeElement !== $('mode')) $('mode').value = s.mode;
+  if (!modeDraft && document.activeElement !== $('mode')) $('mode').value = s.mode;
 
   // AI Prediction
   const hasWater = p?.prediction === 'WATER';
   $('prediction').textContent = p
-    ? (hasWater ? '💧 Có gợi ý tưới' : '✓ Chưa cần tưới')
+    ? (hasWater ? 'Có gợi ý tưới' : 'Chưa cần tưới')
     : s.online ? 'Đang chờ dữ liệu' : 'Đang chờ thiết bị';
 
   // Color AI card by prediction
   const aiCard = $('ai-prediction-card');
-  if (p) {
-    aiCard.style.background = hasWater
-      ? 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(56,189,248,0.02))'
-      : 'linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.02))';
-    aiCard.style.borderColor = hasWater
-      ? 'rgba(56,189,248,0.2)'
-      : 'rgba(34,197,94,0.2)';
-  } else {
-    aiCard.style.background = '';
-    aiCard.style.borderColor = '';
-  }
+  aiCard.dataset.decision = p ? (hasWater ? 'water' : 'hold') : 'waiting';
 
   $('prediction-reason').textContent = p
     ? [p.reason, p.blocked_reason].filter(Boolean).join('. ')
@@ -211,7 +227,7 @@ function renderStatus(s) {
   $('duration-source').textContent = p?.duration_source === 'cnn_regression' ? 'CNN hồi quy'
     : p?.duration_source === 'configured_pulse' ? 'Xung tưới đã cấu hình' : '—';
 
-  badge('ai-badge', sourceNames[p?.source] || 'CNN 1D', p?.source === 'cnn' ? 'good' : 'neutral');
+  badge('ai-badge', p?.source === 'manual' ? 'Gợi ý theo ngưỡng' : sourceNames[p?.source] || 'Chờ dữ liệu', p?.source === 'cnn' ? 'good' : 'neutral');
 
   $('model-note').textContent =
     (m.available ? `Model ${m.version}. ` : '') +
@@ -265,14 +281,16 @@ function renderHistory(items) {
       td.textContent = value;
       // Color status column
       if (i === 4) {
-        if (item.status === 'completed') td.style.color = 'var(--green-400)';
-        else if (item.status === 'rejected' || item.status === 'timed_out') td.style.color = 'var(--red)';
-        else if (item.status === 'started') td.style.color = 'var(--amber)';
+        td.className = 'status-cell';
+        td.dataset.state = item.status;
+        const label = document.createElement('span');
+        label.textContent = value;
+        td.replaceChildren(label);
       }
       // Color action column
       if (i === 1) {
         td.style.fontWeight = '600';
-        td.style.color = item.action === 'stop' ? 'var(--red)' : 'var(--green-400)';
+        td.style.color = item.action === 'stop' ? 'var(--red)' : 'var(--success)';
       }
       tr.append(td);
     }
@@ -282,10 +300,10 @@ function renderHistory(items) {
 
 // ── Chart Draw ───────────────────────────────────────────────────────────────
 const CHART_COLORS = {
-  soil_moisture:  { line: '#22c55e', fill1: 'rgba(34,197,94,0.25)',  fill2: 'rgba(34,197,94,0.01)',  grid: 'rgba(34,197,94,0.07)' },
-  temperature:    { line: '#f59e0b', fill1: 'rgba(245,158,11,0.2)',  fill2: 'rgba(245,158,11,0.01)', grid: 'rgba(245,158,11,0.06)' },
-  humidity:       { line: '#38bdf8', fill1: 'rgba(56,189,248,0.2)',  fill2: 'rgba(56,189,248,0.01)', grid: 'rgba(56,189,248,0.06)' },
-  light_intensity:{ line: '#facc15', fill1: 'rgba(250,204,21,0.2)',  fill2: 'rgba(250,204,21,0.01)', grid: 'rgba(250,204,21,0.06)' },
+  soil_moisture:  { line: '#16a34a', fill1: 'rgba(34,197,94,0.18)',  fill2: 'rgba(34,197,94,0.01)',  grid: 'rgba(34,197,94,0.10)' },
+  temperature:    { line: '#d97706', fill1: 'rgba(217,119,6,0.15)',  fill2: 'rgba(217,119,6,0.01)', grid: 'rgba(217,119,6,0.08)' },
+  humidity:       { line: '#0284c7', fill1: 'rgba(2,132,199,0.15)',  fill2: 'rgba(2,132,199,0.01)', grid: 'rgba(2,132,199,0.08)' },
+  light_intensity:{ line: '#ca8a04', fill1: 'rgba(202,138,4,0.15)',  fill2: 'rgba(202,138,4,0.01)', grid: 'rgba(202,138,4,0.08)' },
 };
 
 function draw() {
@@ -297,13 +315,27 @@ function draw() {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const points = rows.filter(r => r[metric] != null && Number.isFinite(r[metric]));
+  const points = rows.filter(r => r.sensor_ok !== false && r[metric] != null && Number.isFinite(r[metric]));
   $('chart-empty').hidden = points.length > 0;
   $('sample-count').textContent = rows.length + ' mẫu gần nhất';
+  $('chart-gap-note').hidden = true;
   if (!points.length) {
+    for (const id of ['chart-latest', 'chart-min', 'chart-max']) $(id).textContent = '—';
     canvas.setAttribute('aria-label', 'Chưa có dữ liệu cảm biến trong khoảng đã chọn');
     return;
   }
+  const values = points.map(p => p[metric]);
+  const formatValue = value => `${number(value, metric === 'light_intensity' ? 0 : 1)} ${units[metric]}`;
+  $('chart-latest').textContent = formatValue(points.at(-1)[metric]);
+  $('chart-min').textContent = formatValue(Math.min(...values));
+  $('chart-max').textContent = formatValue(Math.max(...values));
+  const segments = [];
+  for (const point of points) {
+    const prior = segments.at(-1)?.at(-1);
+    if (!prior || new Date(point.timestamp) - new Date(prior.timestamp) > 120000 || Boolean(point.simulated) !== Boolean(prior.simulated)) segments.push([]);
+    segments.at(-1).push(point);
+  }
+  $('chart-gap-note').hidden = segments.length < 2;
 
   const w = rect.width, h = rect.height;
   const left = 46, right = 14, top = 20, bottom = 32;
@@ -327,8 +359,8 @@ function draw() {
   const yPos = p => top + (hi - p[metric]) / (hi - lo) * (h - top - bottom);
 
   // Grid lines
-  ctx.font = '10px Inter, system-ui, sans-serif';
-  ctx.fillStyle = '#94aa9e';
+  ctx.font = '11px Segoe UI, system-ui, sans-serif';
+  ctx.fillStyle = '#64796a';
   ctx.strokeStyle = colors.grid;
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
@@ -339,51 +371,50 @@ function draw() {
     ctx.stroke();
     ctx.fillText(number(hi - (hi - lo) * i / 4, 0), 2, yy + 3.5);
   }
-  ctx.fillStyle = '#94aa9e';
+  ctx.fillStyle = '#64796a';
   ctx.fillText(units[metric], 2, 13);
 
   // Fill gradient area
-  ctx.beginPath();
-  ctx.moveTo(xPos(points[0]), h - bottom);
-  points.forEach(p => ctx.lineTo(xPos(p), yPos(p)));
-  ctx.lineTo(xPos(points.at(-1)), h - bottom);
-  ctx.closePath();
   const gradient = ctx.createLinearGradient(0, top, 0, h - bottom);
   gradient.addColorStop(0, colors.fill1);
   gradient.addColorStop(1, colors.fill2);
   ctx.fillStyle = gradient;
-  ctx.fill();
+  for (const segment of segments) {
+    ctx.beginPath();
+    ctx.moveTo(xPos(segment[0]), h - bottom);
+    segment.forEach(p => ctx.lineTo(xPos(p), yPos(p)));
+    ctx.lineTo(xPos(segment.at(-1)), h - bottom);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   // Main line
   ctx.strokeStyle = colors.line;
   ctx.lineWidth   = 2.5;
   ctx.lineJoin    = 'round';
   ctx.lineCap     = 'round';
-  ctx.shadowColor = colors.line;
-  ctx.shadowBlur  = 6;
   ctx.beginPath();
-  points.forEach((p, i) => i ? ctx.lineTo(xPos(p), yPos(p)) : ctx.moveTo(xPos(p), yPos(p)));
+  segments.forEach(segment => segment.forEach((p, i) => i ? ctx.lineTo(xPos(p), yPos(p)) : ctx.moveTo(xPos(p), yPos(p))));
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Single point dot
-  if (points.length === 1) {
+  for (const segment of segments.filter(s => s.length === 1)) {
     ctx.beginPath();
-    ctx.arc(xPos(points[0]), yPos(points[0]), 5, 0, Math.PI * 2);
+    ctx.arc(xPos(segment[0]), yPos(segment[0]), 4, 0, Math.PI * 2);
     ctx.fillStyle = colors.line;
     ctx.fill();
   }
 
   // Time labels
-  ctx.fillStyle  = '#94aa9e';
-  ctx.font       = '10px Inter, system-ui, sans-serif';
+  ctx.fillStyle  = '#64796a';
+  ctx.font       = '11px Segoe UI, system-ui, sans-serif';
   ctx.textAlign  = 'left';
   const fmt = new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
   ctx.fillText(fmt.format(new Date(t0)), left, h - 6);
   ctx.textAlign = 'right';
   ctx.fillText(fmt.format(new Date(t1)), w - right, h - 6);
 
-  canvas.setAttribute('aria-label', `${points.length} mẫu ${metric}, nhỏ nhất ${number(Math.min(...points.map(p => p[metric])))}, lớn nhất ${number(Math.max(...points.map(p => p[metric])))} ${units[metric]}`);
+  canvas.setAttribute('aria-label', `${points.length} mẫu ${metricNames[metric]}, nhỏ nhất ${formatValue(Math.min(...values))}, lớn nhất ${formatValue(Math.max(...values))}`);
 }
 
 // ── Refresh ──────────────────────────────────────────────────────────────────
@@ -432,7 +463,11 @@ async function command(button, path, body) {
   else commandPending = true;
   updateControls();
   try {
-    await (await api(path, body)).json();
+    const result = await (await api(path, body)).json();
+    if (path === '/api/mode') {
+      modeDraft = false;
+      renderStatus(result);
+    }
     message(
       path === '/api/mode'
         ? 'Đã đổi chế độ. Thiết bị sẽ nhận lệnh dừng trước khi áp dụng lần tưới tiếp theo.'
@@ -461,6 +496,7 @@ $('connect-form').addEventListener('submit', e => {
   }
   token  = $('token').value.trim();
   device = $('device').value.trim();
+  modeDraft = false;
   connected = false;
   lastStatus = null;
   rows = [];
@@ -483,6 +519,8 @@ $('refresh').onclick = () => refresh();
 
 // Hours select
 $('hours').onchange = refresh;
+$('mode').onchange = () => { modeDraft = true; };
+$('message-dismiss').onclick = () => { $('message').hidden = true; };
 
 // Chart metric tabs
 document.querySelectorAll('[data-metric]').forEach(button =>
