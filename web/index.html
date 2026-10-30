@@ -105,6 +105,8 @@
       </button>
     </section>
 
+    <details id="connection-settings" class="connection-settings" open>
+      <summary><span class="connection-heading"><span class="connection-symbol" aria-hidden="true">↗</span><span><strong>Kết nối khu vườn</strong><small id="connection-caption">Nhập khóa quản trị để bắt đầu theo dõi</small></span></span><span class="connection-edit">Thiết lập <span aria-hidden="true">⌄</span></span></summary>
     <form id="connect-form" class="connect-card">
       <div class="connect-icon" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -125,6 +127,7 @@
       </button>
       <p class="connect-hint" id="connect-hint">Khóa chỉ giữ trong tab và gửi đến API để xác thực.</p>
     </form>
+    </details>
 
     <div id="message" role="status" aria-live="polite" class="message" hidden>
       <span id="message-text" class="message-content"></span>
@@ -134,7 +137,7 @@
     <section class="hero-section">
       <div class="hero-content">
         <div class="hero-badge"><span class="hero-badge-dot" aria-hidden="true"></span>SMART GARDEN LAB</div>
-        <h2 class="hero-title">Dữ liệu rõ ràng.<br><em>Chủ động từng lần tưới.</em></h2>
+        <h2 class="hero-title">Chăm cây từ dữ liệu.<br><em>Kiểm soát từng lần tưới.</em></h2>
         <p id="garden-summary" class="hero-desc">Kết nối để xem tình trạng khu vườn, dữ liệu cảm biến và gợi ý tưới.</p>
         <div class="hero-meta">
           <div class="hero-meta-item">
@@ -182,7 +185,7 @@
     <section class="metrics-grid" aria-label="Chỉ số cảm biến">
       <article class="metric-card" id="metric-soil">
         <div class="metric-header">
-          <div class="metric-info"><span class="metric-label">Độ ẩm đất</span><span class="metric-sensor">Capacitive · ADC</span></div>
+          <div class="metric-info"><span class="metric-label">Độ ẩm đất</span><span class="metric-sensor">Đầu dò đất · ADC</span></div>
           <div class="metric-icon-wrap metric-icon-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
         </div>
         <div class="metric-value-row"><strong id="soil" class="metric-number">—</strong><span class="metric-unit">%</span></div>
@@ -221,12 +224,18 @@
       </article>
     </section>
 
+    <section class="system-strip" aria-label="Tình trạng hệ thống">
+      <article class="system-item"><span class="system-marker" aria-hidden="true">01</span><div><p>Liên lạc thiết bị</p><strong id="health-link">Chưa kết nối</strong><small id="health-updated">Chờ bản ghi cảm biến</small></div></article>
+      <article class="system-item"><span class="system-marker" aria-hidden="true">02</span><div><p>Cảm biến &amp; nguồn nước</p><strong id="health-sensors">Chưa xác định</strong><small id="health-sensor-note">Cần dữ liệu mới từ thiết bị</small></div></article>
+      <article class="system-item"><span class="system-marker" aria-hidden="true">03</span><div><p>Chế độ đang áp dụng</p><strong id="health-mode">Chưa xác định</strong><small>Thay đổi tại mục điều khiển tưới</small></div><a href="#control" aria-label="Đến điều khiển tưới">↗</a></article>
+    </section>
+
     <section class="main-grid" id="monitor">
       <article class="panel chart-panel">
         <div class="panel-header">
           <div class="panel-title-group">
             <div class="panel-icon panel-icon-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-            <div><h3 class="panel-title">Nhịp điệu khu vườn</h3><p class="panel-subtitle">Các mẫu cảm biến được cập nhật định kỳ</p></div>
+            <div><h3 class="panel-title">Diễn biến môi trường</h3><p class="panel-subtitle">Theo dõi thay đổi trong khoảng thời gian đã chọn</p></div>
           </div>
           <select id="hours" class="select-styled" aria-label="Khoảng thời gian">
             <option value="1">1 giờ qua</option>
@@ -324,6 +333,16 @@
         </div>
         <span id="history-count" class="badge badge-neutral">0 lệnh</span>
       </div>
+      <div class="history-toolbar">
+        <label class="history-search"><span aria-hidden="true">⌕</span><input id="history-search" type="search" placeholder="Tìm thao tác, nguồn hoặc ghi chú…" aria-label="Tìm trong nhật ký tưới"></label>
+        <select id="history-filter" class="select-styled" aria-label="Lọc trạng thái lệnh">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="pending">Đang xử lý</option>
+          <option value="finished">Đã kết thúc</option>
+          <option value="issues">Cần kiểm tra</option>
+        </select>
+      </div>
+      <p id="history-result" class="history-result" role="status">Hiển thị 0 / 0 lệnh đã tải</p>
       <div class="table-wrap" role="region" aria-label="Bảng lịch sử tưới có thể cuộn ngang" tabindex="0">
         <table>
           <caption class="sr-only">Các lệnh tưới và phản hồi từ thiết bị</caption>

@@ -5,8 +5,29 @@ let token = '', device = 'garden-01', rows = [], metric = 'soil_moisture', polli
 let lastStatus = null, lastCommands = [], lastRefresh = 0, refreshPromise = null;
 let commandPending = false, stopPending = false, exporting = false;
 let modeDraft = false;
+let connectionCollapsed = false;
+const modeNames = { manual: 'Thủ công', rule: 'Tự động theo ngưỡng', ai: 'Tự động theo AI' };
+
+function renderSystemHealth() {
+  const s = lastStatus, r = s?.latest;
+  const fresh = connected && Date.now() - lastRefresh < 15000;
+  const online = fresh && s?.online;
+  $('health-link').textContent = !fresh ? (token ? 'Chờ kết nối máy chủ' : 'Chưa kết nối')
+    : online ? (r?.simulated ? 'Mô phỏng trực tuyến' : 'Thiết bị trực tuyến') : 'Thiết bị ngoại tuyến';
+  $('health-link').dataset.tone = online ? 'good' : 'muted';
+  const seconds = r ? Math.max(0, Math.floor((Date.now() - new Date(r.timestamp).getTime()) / 1000)) : null;
+  $('health-updated').textContent = seconds == null ? 'Chờ bản ghi cảm biến'
+    : `Bản ghi ${seconds < 60 ? `${seconds} giây` : seconds < 3600 ? `${Math.floor(seconds / 60)} phút` : `${Math.floor(seconds / 3600)} giờ`} trước`;
+  $('health-sensors').textContent = !online ? 'Chưa xác định' : !r?.sensor_ok ? 'Cần kiểm tra cảm biến'
+    : !r.reservoir_ok ? 'Nguồn nước chưa sẵn sàng' : 'Thiết bị báo sẵn sàng';
+  $('health-sensors').dataset.tone = !online ? 'muted' : r?.sensor_ok && r.reservoir_ok ? 'good' : 'warn';
+  $('health-sensor-note').textContent = !online ? 'Cần dữ liệu mới từ thiết bị' : r?.simulated ? 'Trạng thái từ thiết bị mô phỏng' : 'Theo tín hiệu thiết bị; chưa xác nhận dòng nước';
+  $('health-mode').textContent = fresh ? modeNames[s?.mode] || 'Chưa xác định' : 'Chưa xác định';
+  $('connection-caption').textContent = fresh ? `${s.device_id} · Đã xác thực máy chủ` : token ? 'Đang chờ kết nối lại · Có thể chỉnh thiết lập' : 'Nhập khóa quản trị để bắt đầu theo dõi';
+}
 
 function updateControls() {
+  renderSystemHealth();
   const s = lastStatus, r = s?.latest;
   const fresh = connected && Date.now() - lastRefresh < 15000;
   const activeStart = lastCommands.some(c => c.action === 'start' && ['queued', 'delivered', 'started'].includes(c.status));
@@ -249,21 +270,29 @@ function renderStatus(s) {
 function renderHistory(items) {
   lastCommands = items;
   $('history-count').textContent = items.length + ' lệnh';
+  const term = $('history-search').value.trim().toLocaleLowerCase('vi');
+  const category = $('history-filter').value;
+  const groups = { pending: ['queued', 'delivered', 'started'], finished: ['completed', 'stopped', 'cancelled'], issues: ['rejected', 'timed_out'] };
+  const visible = items.filter(item => (category === 'all' || groups[category]?.includes(item.status)) &&
+    [item.reason, sourceNames[item.source] || item.source, statusNames[item.status] || item.status,
+      item.action === 'stop' ? 'Dừng bơm' : 'Bật bơm', date(item.created_at)]
+      .join(' ').toLocaleLowerCase('vi').includes(term));
+  $('history-result').textContent = `Hiển thị ${visible.length} / ${items.length} lệnh đã tải`;
   const body = $('history-body');
   body.replaceChildren();
 
-  if (!items.length) {
+  if (!visible.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
     td.colSpan = 6;
     td.className = 'empty-row';
-    td.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>Chưa có hoạt động tưới`;
+    td.textContent = items.length ? 'Không có lệnh phù hợp. Thử từ khóa hoặc trạng thái khác.' : 'Chưa có hoạt động tưới. Các lệnh và xác nhận sẽ xuất hiện tại đây.';
     tr.append(td);
     body.append(tr);
     return;
   }
 
-  for (const item of items) {
+  for (const item of visible) {
     const tr = document.createElement('tr');
     const values = [
       date(item.created_at),
@@ -435,6 +464,12 @@ function refresh() {
     rows = r;
     draw();
     renderHistory(h);
+    if (!connectionCollapsed) {
+      // Return focus before collapsing the form that contains the submit button.
+      if ($('connect-form').contains(document.activeElement)) $('connection-settings').querySelector('summary').focus();
+      $('connection-settings').open = false;
+      connectionCollapsed = true;
+    }
     if (recovering) message('Đã kết nối. Dữ liệu được cập nhật mỗi 5 giây.');
   } catch (e) {
     connected = false;
@@ -521,6 +556,8 @@ $('refresh').onclick = () => refresh();
 $('hours').onchange = refresh;
 $('mode').onchange = () => { modeDraft = true; };
 $('message-dismiss').onclick = () => { $('message').hidden = true; };
+$('history-search').oninput = () => renderHistory(lastCommands);
+$('history-filter').onchange = () => renderHistory(lastCommands);
 
 // Chart metric tabs
 document.querySelectorAll('[data-metric]').forEach(button =>
